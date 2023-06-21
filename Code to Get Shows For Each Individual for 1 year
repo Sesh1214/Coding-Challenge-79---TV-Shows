@@ -1,0 +1,105 @@
+library(dplyr)
+
+# Load the dataset of TV shows and movies
+# Assuming the dataset is stored in a data frame called 'dataset'
+# with columns 'Title' and 'Genre'
+dataset <- read.csv("tv_shows_movies.csv")
+
+# Filter out the disliked categories for each family member
+jake_likes <- c("Comedy", "Fantasy", "Sports", "Action", "Kids")
+jake_dislikes <- c("Documentary", "Drama", "Military and War", "Horror")
+jake_filtered <- dataset %>%
+  filter(!Genre %in% jake_dislikes)
+
+amy_likes <- c("Documentary", "Western", "Adventure", "TV Shows")
+amy_dislikes <- c("Horror", "Suspense", "Kids", "Music Videos and Concerts")
+amy_filtered <- dataset %>%
+  filter(!Genre %in% amy_dislikes)
+
+rosa_likes <- c("Horror", "Drama", "Action", "Suspense", "LGBTQ")
+rosa_dislikes <- c("Kids", "Comedy", "Science Fiction", "Faith and Spirituality")
+rosa_filtered <- dataset %>%
+  filter(!Genre %in% rosa_dislikes)
+
+charles_likes <- c("Kids", "Comedy", "Music Videos and Concerts", "Arts, Entertainment and Culture")
+charles_dislikes <- c("Military and War", "Action", "Sports", "Western")
+charles_filtered <- dataset %>%
+  filter(!Genre %in% charles_dislikes)
+
+# Combine the filtered datasets for each family member
+combined_dataset <- bind_rows(jake_filtered, amy_filtered, rosa_filtered, charles_filtered)
+
+# Shuffle the combined dataset
+combined_dataset <- combined_dataset %>%
+  sample_frac(1)
+
+# Generate the schedule
+schedule <- data.frame(Date = character(365), Jake = character(365), Amy = character(365),
+                       Rosa = character(365), Charles = character(365), stringsAsFactors = FALSE)
+start_date <- as.Date("2023-01-01")
+
+# Helper function to check if a show of a particular genre has been scheduled for a family member on a given date
+is_show_scheduled <- function(date, genre, family_member) {
+  scheduled_shows <- schedule[schedule$Date <= date, family_member]
+  any(grepl(paste(genre, collapse = "|"), scheduled_shows, ignore.case = TRUE))
+}
+
+for (i in 1:365) {
+  date <- start_date + i - 1
+  
+  # Select a show for each family member
+  jake_show <- combined_dataset %>%
+    filter(Genre %in% jake_likes) %>%
+    sample_n(1) %>%
+    pull(Title)
+  
+  amy_show <- combined_dataset %>%
+    filter(Genre %in% amy_likes) %>%
+    sample_n(1) %>%
+    pull(Title)
+  
+  rosa_show <- combined_dataset %>%
+    filter(Genre %in% rosa_likes) %>%
+    sample_n(1) %>%
+    pull(Title)
+  
+  charles_show <- combined_dataset %>%
+    filter(Genre %in% charles_likes) %>%
+    sample_n(1) %>%
+    pull(Title)
+  
+  # Check if a show of the same genre has been scheduled for each family member on consecutive days
+  while (is_show_scheduled(date - 1, jake_show, "Jake") ||
+         is_show_scheduled(date - 1, amy_show, "Amy") ||
+         is_show_scheduled(date - 1, rosa_show, "Rosa") ||
+         is_show_scheduled(date - 1, charles_show, "Charles")) {
+    jake_show <- combined_dataset %>%
+      filter(Genre %in% jake_likes) %>%
+      sample_n(1) %>%
+      pull(Title)
+    
+    amy_show <- combined_dataset %>%
+      filter(Genre %in% amy_likes) %>%
+      sample_n(1) %>%
+      pull(Title)
+    
+    rosa_show <- combined_dataset %>%
+      filter(Genre %in% rosa_likes) %>%
+      sample_n(1) %>%
+      pull(Title)
+    
+    charles_show <- combined_dataset %>%
+      filter(Genre %in% charles_likes) %>%
+      sample_n(1) %>%
+      pull(Title)
+  }
+  
+  # Update the schedule
+  schedule[i, "Date"] <- as.character(date)
+  schedule[i, "Jake"] <- jake_show
+  schedule[i, "Amy"] <- amy_show
+  schedule[i, "Rosa"] <- rosa_show
+  schedule[i, "Charles"] <- charles_show
+}
+
+write.csv("Schedule.csv")
